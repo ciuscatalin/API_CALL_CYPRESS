@@ -74,7 +74,8 @@ describe('REST API Test with Cypress', () => {
 			body:{
 				name: 'Project',
 				description: 'Simple Project'  
-			}
+			},
+			failOnStatusCode: false,
 		}).as('contributor')
 
 		//VERIFY IF HEADER CONTAIN 'TEXT/HTML'
