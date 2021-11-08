@@ -1,8 +1,16 @@
 /// <reference types="Cypress" />
 
 describe('REST API Test with Cypress', () => {
-	var projId
-	// var delProjId = 31
+	let username, password, token, projId, templateQuizId, stageId
+
+	before('Get data from fixture.',() =>{
+		cy.fixture('credential').then(data => {
+			username = data.username
+			password = data.password
+			token = data.tokenAD
+		})
+	})
+	
 
    	// CALL THE LOGIN REQUEST 							------------------------------------
   	it('Login with Cypress Request', () =>{
@@ -10,17 +18,12 @@ describe('REST API Test with Cypress', () => {
 			method:'POST', 
 			url: 'https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/login',
 			body:{
-				username: 'tech.admin@accesa.eu',
-				password: 'admin', 
-				tokenAD: 'activeDirectoryTokenFE'
-			}
+				username: username,
+				password: password, 
+				tokenAD: token
+			},
+			failOnStatusCode: false
 		}).as('login')
-		
-		//VERIFY IF HEADER CONTAIN 'APPLICATION/JSON'
-		cy.get('@login')
-			  .its('headers')
-			  .its('content-type')
-			  .should('include', 'application/json')
 		
 		//CHECK IF IN THE RESPONSE BODY EXIST 'TOKEN'
 		cy.get('@login')
@@ -45,50 +48,88 @@ describe('REST API Test with Cypress', () => {
 			}
 		}).as('project')
 
-		//VERIFY IF HEADER CONTAIN 'APPLICATION/JSON'
-		cy.get('@project')
-			  .its('headers')
-			  .its('content-type')
-			  .should('include', 'application/json')
-
 		//CHECK THE BODY AND GET THE PROJECT ID FROM THE PROJECT CREATED
 		cy.get('@project')
 			.its('body')
 			.then( i => {
-				cy.log(`A project was create with id: ${i.projectId}`)
 				projId = i.projectId
 			})
 
 		//CHECK IF STATUS CODE IS 201(CREATED)
 		cy.get('@project')
 			.its('status')
-			.should('equal', 201)
+			.should('equal', 201).then(() =>{
+				cy.log(`A project was create with id: ${projId}`)
+				
+				// CALL FOR ADDING NEW CONTRIBUTOR TO A NEW PROJECT 
+				cy.request({
+					method:'POST', 
+					url: `https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/projects/contributors/${projId}/${username}`,
+					body:{
+						name: 'Project',
+						description: 'Simple Project'  
+					},
+					// failOnStatusCode: false,
+				}).as('contributor')
+		
+				//CHECK IF RESPONSE CODE IS 204(NO CONTENT)
+				cy.get('@contributor')
+					.its('status')
+					.should('equal', 204)
+					.then(() =>{
+						cy.log(`Contributor: ${username} added to project with id: ${projId}`)
+					})
+			})
 	})
 
-
-	// CALL FOR ADDING A NEW CONTRIBUTOR ON A PROJECT
-	it('Add contributor to a project for a user Cypress Request', () =>{
+	//CALL FOR CREATING A NEW TEMPLATE QUIZ
+	it("Add new template quiz request", () => {
 		cy.request({
-			method:'POST', 
-			url: `https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/projects/contributors/${projId}/tech.admin@accesa.eu`,
-			body:{
-				name: 'Project',
-				description: 'Simple Project'  
+			method: "POST",
+			url: `https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/template-quizzes?projectId=${projId}`
+		}).as('quiz')
+		
+		cy.get('@quiz')
+			.its('body')
+			.then(i => {
+				templateQuizId = i.templateQuizId
+			})
+		cy.get('@quiz')
+			.its('status')
+			.should('equal', 201)
+			.then(() =>{	
+				cy.log("Template quiz created with id " + templateQuizId)
+			})
+
+		})
+
+
+	// CALL FOR CREATING A NEW STAGE
+	it("Add new stage request", () => {
+		cy.request({
+			method: "POST",
+			url: "https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/stages",
+			body: {
+				"templateQuizId": templateQuizId,
+				"stageName": "Stage Test1",
+				"points": 10.0
 			}
-		}).as('contributor')
+		}).as('stage')
 
-		//VERIFY IF HEADER CONTAIN 'TEXT/HTML'
-		cy.get('@contributor')
-			  .its('headers')
-			  .its('content-type')
-			  .should('include', 'text/html')
+		cy.get('@stage')
+			.its('body')
+			.then(stage => {
+				stageId = stage.stageId;
+			})
 
-		//CHECK IF RESPONSE CODE IS 204(NO CONTENT)
-		cy.get('@contributor')
-		.its('status')
-		.should('equal', 204)
+		cy.get('@stage')
+			.its('status')
+			.should('equal', 201)
+			.then(() => {
+				cy.log("Stage created with Id " + stageId)
+			})
 	})
-	
+
 
 	// CALL FOR GETTING ALL THE PROJECT IN WHICH USER IS A CONTRIBUTOR 
 	it('Get projects for a user Cypress Request', () =>{
@@ -117,23 +158,56 @@ describe('REST API Test with Cypress', () => {
 	})
 
 
+	// CALL FOR DELETING A STAGE
+	it("Delete stage request", () => {
+		cy.log(`Delete stage with id ${stageId}`)
+		cy.request({
+			method: "DELETE",
+			url: `https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/stages/${stageId}`
+		}).as('stage')
+			
+		cy.get('@stage')
+			.its('status')
+			.should('equal', 204)
+			.then(() => {
+				cy.log(`Stage with id:${stageId} has been deleted`)
+			})	
+	})
+
+	// CALL FOR DELETING A TEMPLET QUIZ
+	it("Delete template quiz request", () => {
+		cy.log(`Delete template quiz with id ${templateQuizId}`)
+		cy.request({
+			method: "DELETE",
+			url: `https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/template-quizzes/${templateQuizId}`
+		}).as('quiz')
+			
+		//CHECK IF RESPONSE CODE IS 204(NO CONTENT)
+		cy.get('@quiz')
+			.its('status')
+			.should('equal', 204)
+			.then(() => {
+				cy.log(`Template Quiz with id:${templateQuizId} has been deleted`)
+			})		
+	})
+	
+
 	// DELETE PROJECT  
-	it('Get projects for a user Cypress Request', () =>{
+	it('Delete a project for a user Cypress Request', () =>{
 		cy.request({
 			method:'DELETE', 
 			url: `https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/projects/${projId}`
-		}).as('projects')
-
-		//VERIFY IF HEADER CONTAIN 'APPLICATION/JSON'
-		cy.get('@projects')
-			  .its('headers')
-			  .its('content-type')
-			  .should('include', 'text/html')
-
+		}).as('project')
+	
+		// cy.wait('@project')
 		
 		//CHECK IF RESPONSE CODE IS 204(NO CONTENT)
-		cy.get('@projects')
+		cy.get('@project')
 			.its('status')
 			.should('equal', 204)
+			.then(() => {
+				cy.log(`Project with id:${projId} has been deleted`)
+			})
 	})
 })
+// cy.wait('@projects') !!!!!!!
