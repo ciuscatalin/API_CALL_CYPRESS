@@ -5,9 +5,9 @@ describe('REST API Test with Cypress', () => {
 
 	before('Get data from fixture.',() =>{
 		cy.fixture('credential').then(data => {
-			username = data.username
-			password = data.password
-			token = data.tokenAD
+			username = data.username		//getting username from fixture file
+			password = data.password		//getting password from fixture file
+			token = data.tokenAD			//getting the token from fixture file
 		})
 	})
 	
@@ -34,6 +34,9 @@ describe('REST API Test with Cypress', () => {
 		cy.get('@login')
 			.its('status')
 			.should('equal', 200)
+			.then(() => {
+				cy.log(`Succesfull login with username: ${username}`)
+			})
 	})
 
 
