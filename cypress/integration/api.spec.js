@@ -1,8 +1,9 @@
 /// <reference types="Cypress" />
 
 describe('REST API Test with Cypress', () => {
-	let username, password, token, projId, templateQuizId, stageId
+	let username, password, token, projId, templateQuizId, stageId, authorization
 
+	//Getting data from a .Json file before the test are executed
 	before('Get data from fixture.',() =>{
 		cy.fixture('credential').then(data => {
 			username = data.username		//getting username from fixture file
@@ -12,23 +13,26 @@ describe('REST API Test with Cypress', () => {
 	})
 	
 
-   	// CALL THE LOGIN REQUEST 							------------------------------------
+   	// CALL THE LOGIN REQUEST 						
   	it('Login with Cypress Request', () =>{
 		cy.request({
-			method:'POST', 
-			url: 'https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/login',
-			body:{
+			method:'POST', 																		// Methode called
+			url: 'https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/login',		// Url with the endpoint
+			body:{																				// The body with data 
 				username: username,
 				password: password, 
 				tokenAD: token
 			},
-			failOnStatusCode: false
-		}).as('login')
+			failOnStatusCode: false																// Go throu even if the request fail 
+		}).as('login')																			// Save as alias
 		
 		//CHECK IF IN THE RESPONSE BODY EXIST 'TOKEN'
 		cy.get('@login')
 			.its('body')
-			.should('have.property', 'token')
+			.should('have.property', 'token').then( data => {
+				// cy.log(data)
+				authorization = data
+			})
 
 		//CHECK IF STATUS IS 200(OK)
 		cy.get('@login')
@@ -37,6 +41,7 @@ describe('REST API Test with Cypress', () => {
 			.then(() => {
 				cy.log(`Succesfull login with username: ${username}`)
 			})
+		cy.wait(2000).log("Wait for 2second is for demo purposes")
 	})
 
 
@@ -48,6 +53,9 @@ describe('REST API Test with Cypress', () => {
 			body:{
 				name: 'Project',
 				description: 'Simple Project'  
+			},
+			headers:{
+				Authorization: authorization
 			}
 		}).as('project')
 
@@ -63,7 +71,9 @@ describe('REST API Test with Cypress', () => {
 			.its('status')
 			.should('equal', 201).then(() =>{
 				cy.log(`A project was create with id: ${projId}`)
-				
+
+				cy.wait(2000).log("Wait for 2second is for demo purposes")
+
 				// CALL FOR ADDING NEW CONTRIBUTOR TO A NEW PROJECT 
 				cy.request({
 					method:'POST', 
@@ -72,6 +82,9 @@ describe('REST API Test with Cypress', () => {
 						name: 'Project',
 						description: 'Simple Project'  
 					},
+					headers:{
+						Authorization: authorization
+					}
 					// failOnStatusCode: false,
 				}).as('contributor')
 		
@@ -82,6 +95,7 @@ describe('REST API Test with Cypress', () => {
 					.then(() =>{
 						cy.log(`Contributor: ${username} added to project with id: ${projId}`)
 					})
+				cy.wait(2000).log("Wait for 2second is for demo purposes")
 			})
 	})
 
@@ -89,7 +103,10 @@ describe('REST API Test with Cypress', () => {
 	it("Add new template quiz request", () => {
 		cy.request({
 			method: "POST",
-			url: `https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/template-quizzes?projectId=${projId}`
+			url: `https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/template-quizzes?projectId=${projId}`,
+			headers:{
+				Authorization: authorization
+			}
 		}).as('quiz')
 		
 		cy.get('@quiz')
@@ -103,7 +120,9 @@ describe('REST API Test with Cypress', () => {
 			.then(() =>{	
 				cy.log("Template quiz created with id " + templateQuizId)
 			})
-
+	
+		cy.wait(2000).log("Wait for 2second is for demo purposes")
+		
 		})
 
 
@@ -116,6 +135,9 @@ describe('REST API Test with Cypress', () => {
 				"templateQuizId": templateQuizId,
 				"stageName": "Stage Test1",
 				"points": 10.0
+			},
+			headers:{
+				Authorization: authorization
 			}
 		}).as('stage')
 
@@ -131,6 +153,9 @@ describe('REST API Test with Cypress', () => {
 			.then(() => {
 				cy.log("Stage created with Id " + stageId)
 			})
+		
+		cy.wait(2000).log("Wait for 2second is for demo purposes")
+
 	})
 
 
@@ -138,7 +163,10 @@ describe('REST API Test with Cypress', () => {
 	it('Get projects for a user Cypress Request', () =>{
 		cy.request({
 			method:'GET', 
-			url: 'https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/projects/'
+			url: 'https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/projects/',
+			headers:{
+				Authorization: authorization
+			}
 		}).as('projects')
 
 		//VERIFY IF HEADER CONTAIN 'APPLICATION/JSON'
@@ -158,6 +186,9 @@ describe('REST API Test with Cypress', () => {
 		cy.get('@projects')
 			.its('status')
 			.should('equal', 200)
+
+		cy.wait(2000).log("Wait for 2second is for demo purposes")
+
 	})
 
 
@@ -166,7 +197,10 @@ describe('REST API Test with Cypress', () => {
 		cy.log(`Delete stage with id ${stageId}`)
 		cy.request({
 			method: "DELETE",
-			url: `https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/stages/${stageId}`
+			url: `https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/stages/${stageId}`,
+			headers:{
+				Authorization: authorization
+			}
 		}).as('stage')
 			
 		cy.get('@stage')
@@ -175,6 +209,9 @@ describe('REST API Test with Cypress', () => {
 			.then(() => {
 				cy.log(`Stage with id:${stageId} has been deleted`)
 			})	
+
+		cy.wait(2000).log("Wait for 2second is for demo purposes")
+
 	})
 
 	// CALL FOR DELETING A TEMPLET QUIZ
@@ -182,7 +219,10 @@ describe('REST API Test with Cypress', () => {
 		cy.log(`Delete template quiz with id ${templateQuizId}`)
 		cy.request({
 			method: "DELETE",
-			url: `https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/template-quizzes/${templateQuizId}`
+			url: `https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/template-quizzes/${templateQuizId}`,
+			headers:{
+				Authorization: authorization
+			}
 		}).as('quiz')
 			
 		//CHECK IF RESPONSE CODE IS 204(NO CONTENT)
@@ -199,11 +239,12 @@ describe('REST API Test with Cypress', () => {
 	it('Delete a project for a user Cypress Request', () =>{
 		cy.request({
 			method:'DELETE', 
-			url: `https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/projects/${projId}`
+			url: `https://accesa-internship-portal-be-asvanwz5ea-ez.a.run.app/api/projects/${projId}`,
+			headers:{
+				Authorization: authorization
+			}
 		}).as('project')
 	
-		// cy.wait('@project')
-		
 		//CHECK IF RESPONSE CODE IS 204(NO CONTENT)
 		cy.get('@project')
 			.its('status')
@@ -211,6 +252,9 @@ describe('REST API Test with Cypress', () => {
 			.then(() => {
 				cy.log(`Project with id:${projId} has been deleted`)
 			})
+
+		cy.wait(2000).log("Wait for 2second is for demo purposes")
+
 	})
 })
 // cy.wait('@projects') !!!!!!!
