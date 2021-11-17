@@ -30,7 +30,6 @@ describe('REST API Test with Cypress', () => {
 		cy.get('@login')
 			.its('body')
 			.should('have.property', 'token').then( data => {
-				// cy.log(data)
 				authorization = data
 			})
 
