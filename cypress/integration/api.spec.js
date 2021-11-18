@@ -1,5 +1,6 @@
 /// <reference types="Cypress" />
 
+//Test case
 describe('REST API Test with Cypress', () => {
 	let username, password, token, projId, templateQuizId, stageId, authorization
 
